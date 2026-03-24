@@ -18,6 +18,17 @@
       <Platform>x64</Platform>
     </ProjectConfiguration>
   </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="main.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="InvocationLayer.h" />
+    <ClInclude Include="Marshaller.h" />
+    <ClInclude Include="Message.h" />
+    <ClInclude Include="OpCode.h" />
+    <ClInclude Include="RequestBuilder.h" />
+    <ClInclude Include="UDPSocket.h" />
+  </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>17.0</VCProjectVersion>
     <Keyword>Win32Proj</Keyword>
@@ -128,17 +139,6 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
     </Link>
   </ItemDefinitionGroup>
-  <ItemGroup>
-    <ClInclude Include="..\..\..\..\..\Downloads\files\InvocationLayer.h" />
-    <ClInclude Include="..\..\..\..\..\Downloads\files\Marshaller.h" />
-    <ClInclude Include="..\..\..\..\..\Downloads\files\Message.h" />
-    <ClInclude Include="..\..\..\..\..\Downloads\files\OpCode.h" />
-    <ClInclude Include="..\..\..\..\..\Downloads\files\RequestBuilder.h" />
-    <ClInclude Include="..\..\..\..\..\Downloads\files\UDPSocket.h" />
-  </ItemGroup>
-  <ItemGroup>
-    <ClCompile Include="..\..\..\..\..\Downloads\files\main.cpp" />
-  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
