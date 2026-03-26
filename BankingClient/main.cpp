@@ -3,6 +3,7 @@
 #include <vector>
 #include <stdexcept>
 #include <chrono>
+#include <limits>
 
 #include "OpCode.h"
 #include "Message.h"
@@ -11,6 +12,12 @@
 #include "InvocationLayer.h"
 #include "UDPSocket.h"
 #include <cstdint>
+
+// declaration for getInput helper method
+template <typename T>
+static T getInput(const std::string& prompt,
+	T min = std::numeric_limits<T>::lowest(),
+	T max = (std::numeric_limits<T>::max)());
 
 // ------------------------------------------------------------------ reply helpers
 
@@ -41,7 +48,7 @@ static void doOpenAccount(InvocationLayer& inv) {
 	std::cout << "  Holder name   : "; std::getline(std::cin, name);
 	std::cout << "  Password      : "; std::getline(std::cin, password);
 	std::cout << "  Currency (SGD/USD/EUR/GBP): "; std::getline(std::cin, currStr);
-	std::cout << "  Initial balance: "; std::cin >> balance; std::cin.ignore();
+	balance = getInput<float>("  Initial balance: ", 0);
 
 	Currency cur = currencyFromString(currStr);
 	auto packet = RequestBuilder::buildOpenAccount(cur, balance, name, password, 0);
@@ -51,7 +58,7 @@ static void doOpenAccount(InvocationLayer& inv) {
 		if (reply.status == Status::OK)
 			std::cout << "  [OK] Account opened. Account number: " << readReplyInt(reply) << "\n";
 		else
-			std::cout << "  [ERROR] " << readReplyString(reply) << "\n";
+			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
 	}
 	catch (const std::exception& e) {
 		std::cout << "  [FAIL] " << e.what() << "\n";
@@ -62,7 +69,7 @@ static void doCloseAccount(InvocationLayer& inv) {
 	int32_t accountNo;
 	std::string name, password;
 
-	std::cout << "  Account number: "; std::cin >> accountNo; std::cin.ignore();
+	accountNo = getInput<int32_t>("  Account number: ", 0);
 	std::cout << "  Holder name   : "; std::getline(std::cin, name);
 	std::cout << "  Password      : "; std::getline(std::cin, password);
 
@@ -73,7 +80,7 @@ static void doCloseAccount(InvocationLayer& inv) {
 		if (reply.status == Status::OK)
 			std::cout << "  [OK] " << readReplyString(reply) << "\n";
 		else
-			std::cout << "  [ERROR] " << readReplyString(reply) << "\n";
+			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
 	}
 	catch (const std::exception& e) {
 		std::cout << "  [FAIL] " << e.what() << "\n";
@@ -85,11 +92,11 @@ static void doDepositWithdraw(InvocationLayer& inv) {
 	std::string name, password, currStr;
 	float amount;
 
-	std::cout << "  Account number : "; std::cin >> accountNo; std::cin.ignore();
+	accountNo = getInput<int32_t>("  Account number: ", 0);
 	std::cout << "  Holder name    : "; std::getline(std::cin, name);
 	std::cout << "  Password       : "; std::getline(std::cin, password);
 	std::cout << "  Currency       : "; std::getline(std::cin, currStr);
-	std::cout << "  Amount (+dep / -withdraw): "; std::cin >> amount; std::cin.ignore();
+	amount = getInput<float>("  Amount (+dep / -withdraw): ", -10000.0f, 10000.0f);
 
 	Currency cur = currencyFromString(currStr);
 	auto packet = RequestBuilder::buildDepositWithdraw(accountNo, cur, amount, name, password, 0);
@@ -99,7 +106,7 @@ static void doDepositWithdraw(InvocationLayer& inv) {
 		if (reply.status == Status::OK)
 			std::cout << "  [OK] New balance: " << readReplyFloat(reply) << " " << currStr << "\n";
 		else
-			std::cout << "  [ERROR] " << readReplyString(reply) << "\n";
+			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
 	}
 	catch (const std::exception& e) {
 		std::cout << "  [FAIL] " << e.what() << "\n";
@@ -121,7 +128,7 @@ static void doQueryBalance(InvocationLayer& inv) {
 		if (reply.status == Status::OK)
 			std::cout << "  [OK] Balance: " << readReplyFloat(reply) << "\n";
 		else
-			std::cout << "  [ERROR] " << readReplyString(reply) << "\n";
+			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
 	}
 	catch (const std::exception& e) {
 		std::cout << "  [FAIL] " << e.what() << "\n";
@@ -146,7 +153,7 @@ static void doTransfer(InvocationLayer& inv) {
 		if (reply.status == Status::OK)
 			std::cout << "  [OK] Transfer done. New source balance: " << readReplyFloat(reply) << "\n";
 		else
-			std::cout << "  [ERROR] " << readReplyString(reply) << "\n";
+			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
 	}
 	catch (const std::exception& e) {
 		std::cout << "  [FAIL] " << e.what() << "\n";
@@ -235,6 +242,28 @@ static void printMenu() {
 	std::cout << "Choice: ";
 }
 
+template <typename T>
+static T getInput(const std::string& prompt, T min, T max) {
+	T val;
+	while (true) {
+		std::cout << prompt;
+
+		// Try to read the value of type T
+		if (std::cin >> val && val >= min && val <= max) {
+			// Success: Clear the leftover '\n'
+			std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+			return val;
+		}
+
+		// Failure: Clear error flags and junk in buffer
+		std::cin.clear();
+		std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+
+		std::cout << "  [!] Invalid input. Please enter a value between "
+			<< min << " and " << max << ".\n";
+	}
+}
+
 // ------------------------------------------------------------------ main
 
 int main(int argc, char* argv[]) {
@@ -253,8 +282,10 @@ int main(int argc, char* argv[]) {
 		int choice = -1;
 		while (choice != 0) {
 			printMenu();
-			std::cin >> choice;
-			std::cin.ignore();
+
+			// getIntInput will loop internally until the user gives a valid 0-6.
+			// Once it returns, 'choice' is GUARANTEED to be valid.
+			choice = getInput<int>("Choice: ", 0, 6);
 
 			switch (choice) {
 			case 1: doOpenAccount(inv); break;
@@ -264,7 +295,7 @@ int main(int argc, char* argv[]) {
 			case 5: doTransfer(inv); break;
 			case 6: doRegisterMonitor(inv); break;
 			case 0: std::cout << "Bye.\n"; break;
-			default: std::cout << "Unknown option.\n"; break;
+			default: std::cout << "  [!] Invalid choice, try again.\n"; break;
 			}
 		}
 	}
