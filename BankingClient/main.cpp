@@ -182,7 +182,7 @@ static void parseAndPrintCallback(const std::vector<uint8_t>& data) {
 		std::cout << "  [Callback] Account " << accountNo << " was CLOSED\n";
 	else
 		std::cout << "  [Callback] Account " << accountNo
-		<< " updated — balance: " << newBalance
+		<< " updated, balance: " << newBalance
 		<< " " << currencyToString(currency) << "\n";
 }
 
