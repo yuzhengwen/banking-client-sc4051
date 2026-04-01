@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include <chrono>
 #include <limits>
+#include <sstream>
 
 #include "OpCode.h"
 #include "Message.h"
@@ -78,7 +79,7 @@ static void doCloseAccount(InvocationLayer& inv) {
 	try {
 		Message reply = inv.sendRequest(packet);
 		if (reply.status == Status::OK)
-			std::cout << "  [OK] " << readReplyString(reply) << "\n";
+			std::cout << "  [OK] " << "\n";
 		else
 			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
 	}
@@ -117,7 +118,7 @@ static void doQueryBalance(InvocationLayer& inv) {
 	int32_t accountNo;
 	std::string name, password;
 
-	std::cout << "  Account number: "; std::cin >> accountNo; std::cin.ignore();
+	accountNo = getInput<int32_t>("  Account number: ", 0);
 	std::cout << "  Holder name   : "; std::getline(std::cin, name);
 	std::cout << "  Password      : "; std::getline(std::cin, password);
 
@@ -139,12 +140,11 @@ static void doTransfer(InvocationLayer& inv) {
 	int32_t srcNo, dstNo;
 	std::string name, password;
 	float amount;
-
-	std::cout << "  Source account : "; std::cin >> srcNo; std::cin.ignore();
-	std::cout << "  Dest account   : "; std::cin >> dstNo; std::cin.ignore();
+	srcNo = getInput<int32_t>("  Source account : ", 0);
+	dstNo = getInput<int32_t>("  Dest account   : ", 0);
 	std::cout << "  Your name      : "; std::getline(std::cin, name);
 	std::cout << "  Password       : "; std::getline(std::cin, password);
-	std::cout << "  Amount         : "; std::cin >> amount; std::cin.ignore();
+	amount = getInput<float>("  Amount         : ", -10000.0f, 10000.0f);
 
 	auto packet = RequestBuilder::buildTransferFunds(srcNo, dstNo, amount, name, password, 0);
 
@@ -188,7 +188,7 @@ static void parseAndPrintCallback(const std::vector<uint8_t>& data) {
 
 static void doRegisterMonitor(InvocationLayer& inv) {
 	int32_t intervalSeconds;
-	std::cout << "  Monitor interval (seconds): "; std::cin >> intervalSeconds; std::cin.ignore();
+	intervalSeconds = getInput<int32_t>("  Monitor interval (seconds): ", 30);
 
 	auto packet = RequestBuilder::buildRegisterMonitor(intervalSeconds, 0);
 
@@ -196,10 +196,10 @@ static void doRegisterMonitor(InvocationLayer& inv) {
 		// Send the registration request and wait for the server's confirmation
 		Message reply = inv.sendRequest(packet);
 		if (reply.status != Status::OK) {
-			std::cout << "  [ERROR] " << readReplyString(reply) << "\n";
+			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
 			return;
 		}
-		std::cout << "  [OK] " << readReplyString(reply) << "\n";
+		std::cout << "  [OK] " << "\n";
 		std::cout << "  Listening for callbacks for " << intervalSeconds << " seconds...\n";
 
 		// Switch to a short 500ms timeout so we can poll the deadline
@@ -228,6 +228,20 @@ static void doRegisterMonitor(InvocationLayer& inv) {
 	}
 }
 
+static void dropNext(InvocationLayer& inv) {
+	auto packet = RequestBuilder::buildDropNext(0);
+	try {
+		Message reply = inv.sendRequest(packet);
+		if (reply.status == Status::OK)
+			std::cout << "  [OK] Next request will be dropped by the server.\n";
+		else
+			std::cout << "  [ERROR] " << statusToString(reply.status) << "\n";
+	}
+	catch (const std::exception& e) {
+		std::cout << "  [FAIL] " << e.what() << "\n";
+	}
+}
+
 // ------------------------------------------------------------------ menu
 
 static void printMenu() {
@@ -238,6 +252,7 @@ static void printMenu() {
 	std::cout << "  4. Query balance\n";
 	std::cout << "  5. Transfer funds\n";
 	std::cout << "  6. Register monitor\n";
+	std::cout << "  7. Drop Next\n";
 	std::cout << "  0. Exit\n";
 	std::cout << "Choice: ";
 }
@@ -245,19 +260,26 @@ static void printMenu() {
 template <typename T>
 static T getInput(const std::string& prompt, T min, T max) {
 	T val;
+	std::string line;
+
 	while (true) {
 		std::cout << prompt;
 
-		// Try to read the value of type T
-		if (std::cin >> val && val >= min && val <= max) {
-			// Success: Clear the leftover '\n'
-			std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
-			return val;
+		// Read the entire line from the user
+		if (!std::getline(std::cin, line)) {
+			// Handle EOF or stream errors
+			continue;
 		}
 
-		// Failure: Clear error flags and junk in buffer
-		std::cin.clear();
-		std::cin.ignore((std::numeric_limits<std::streamsize>::max)(), '\n');
+		// Use stringstream to parse the line
+		std::stringstream ss(line);
+		char remaining;
+
+		// ss >> val: reads the number
+		// !(ss >> remaining): ensures there is NO non-whitespace character after the number
+		if ((ss >> val) && !(ss >> remaining) && (val >= min && val <= max)) {
+			return val;
+		}
 
 		std::cout << "  [!] Invalid input. Please enter a value between "
 			<< min << " and " << max << ".\n";
@@ -285,7 +307,7 @@ int main(int argc, char* argv[]) {
 
 			// getIntInput will loop internally until the user gives a valid 0-6.
 			// Once it returns, 'choice' is GUARANTEED to be valid.
-			choice = getInput<int>("Choice: ", 0, 6);
+			choice = getInput<int>("Choice: ", 0, 7);
 
 			switch (choice) {
 			case 1: doOpenAccount(inv); break;
@@ -294,6 +316,7 @@ int main(int argc, char* argv[]) {
 			case 4: doQueryBalance(inv); break;
 			case 5: doTransfer(inv); break;
 			case 6: doRegisterMonitor(inv); break;
+			case 7: dropNext(inv); break;
 			case 0: std::cout << "Bye.\n"; break;
 			default: std::cout << "  [!] Invalid choice, try again.\n"; break;
 			}

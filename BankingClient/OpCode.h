@@ -12,6 +12,7 @@ enum class OpCode : uint8_t {
 	REGISTER_MONITOR = 0x04,
 	QUERY_BALANCE = 0x05,   // idempotent
 	TRANSFER_FUNDS = 0x06,   // non-idempotent
+	DROP_NEXT = 0x07,
 	NOTIFY = 0xFF    // server-pushed, no corresponding request. using "CALLBACK" runs into naming conflict with smth in Windows headers.
 };
 

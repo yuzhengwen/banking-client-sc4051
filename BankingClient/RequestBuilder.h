@@ -111,6 +111,13 @@ public:
         return makePacket(requestId, OpCode::TRANSFER_FUNDS, body);
     }
 
+    // 0x07
+    // Drop Next (No body)
+	static std::vector<uint8_t> buildDropNext(int32_t requestId) {
+		std::vector<uint8_t> body; // empty
+		return makePacket(requestId, OpCode::DROP_NEXT, body);
+	}
+
 private:
     // Wrap a body in a full Message (header + body) and serialise to bytes.
     static std::vector<uint8_t> makePacket(int32_t requestId, OpCode opcode,
