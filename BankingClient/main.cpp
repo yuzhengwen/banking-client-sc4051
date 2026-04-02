@@ -14,11 +14,16 @@
 #include "UDPSocket.h"
 #include <cstdint>
 
+// define valid currency strings for input validation
+const std::vector<std::string> validCurrencies = { "SGD", "USD", "EUR", "GBP" };
+
 // declaration for getInput helper method
 template <typename T>
 static T getInput(const std::string& prompt,
 	T min = std::numeric_limits<T>::lowest(),
 	T max = (std::numeric_limits<T>::max)());
+
+static std::string getValidStringInput(const std::string& prompt, const std::vector<std::string>& validInputs);
 
 // ------------------------------------------------------------------ reply helpers
 
@@ -48,7 +53,7 @@ static void doOpenAccount(InvocationLayer& inv) {
 
 	std::cout << "  Holder name   : "; std::getline(std::cin, name);
 	std::cout << "  Password      : "; std::getline(std::cin, password);
-	std::cout << "  Currency (SGD/USD/EUR/GBP): "; std::getline(std::cin, currStr);
+	currStr = getValidStringInput("  Currency (SGD/USD/EUR/GBP): ", validCurrencies);
 	balance = getInput<float>("  Initial balance: ", 0);
 
 	Currency cur = currencyFromString(currStr);
@@ -96,7 +101,7 @@ static void doDepositWithdraw(InvocationLayer& inv) {
 	accountNo = getInput<int32_t>("  Account number: ", 0);
 	std::cout << "  Holder name    : "; std::getline(std::cin, name);
 	std::cout << "  Password       : "; std::getline(std::cin, password);
-	std::cout << "  Currency       : "; std::getline(std::cin, currStr);
+	currStr = getValidStringInput("  Currency (SGD/USD/EUR/GBP): ", validCurrencies);
 	amount = getInput<float>("  Amount (+dep / -withdraw): ", -10000.0f, 10000.0f);
 
 	Currency cur = currencyFromString(currStr);
@@ -283,6 +288,25 @@ static T getInput(const std::string& prompt, T min, T max) {
 
 		std::cout << "  [!] Invalid input. Please enter a value between "
 			<< min << " and " << max << ".\n";
+	}
+}
+
+static std::string getValidStringInput(const std::string& prompt, const std::vector<std::string>& validInputs) {
+	std::string input;
+	while (true) {
+		std::cout << prompt;
+		if (!std::getline(std::cin, input)) {
+			// Handle EOF or stream errors
+			continue;
+		}
+		if (!input.empty() && std::find(validInputs.begin(), validInputs.end(), input) != validInputs.end()) {
+			return input;
+		}
+		std::cout << "  [!] Invalid input. Please enter one of the following: ";
+		for (const auto& validInput : validInputs) {
+			std::cout << validInput << " ";
+		}
+		std::cout << "\n";
 	}
 }
 
