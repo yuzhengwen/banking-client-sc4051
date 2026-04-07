@@ -181,19 +181,20 @@ static void parseAndPrintCallback(const std::vector<uint8_t>& data) {
 	int32_t  accountNo = Marshaller::readInt(body, offset);
 	uint8_t  currByte = Marshaller::readByte(body, offset);
 	float    newBalance = Marshaller::readFloat(body, offset);
-	Currency currency = static_cast<Currency>(currByte);
+	std::string msg = Marshaller::readString(body, offset);
 
 	if (newBalance < 0)
 		std::cout << "  [Callback] Account " << accountNo << " was CLOSED\n";
 	else
 		std::cout << "  [Callback] Account " << accountNo
-		<< " updated, balance: " << newBalance
-		<< " " << currencyToString(currency) << "\n";
+		<< " | balance: " << newBalance
+		<< " " << currencyToString(static_cast<Currency>(currByte))
+		<< " | " << msg << "\n";
 }
 
 static void doRegisterMonitor(InvocationLayer& inv) {
 	int32_t intervalSeconds;
-	intervalSeconds = getInput<int32_t>("  Monitor interval (seconds): ", 30);
+	intervalSeconds = getInput<int32_t>("  Monitor interval (seconds): ", 20, 10000);
 
 	auto packet = RequestBuilder::buildRegisterMonitor(intervalSeconds, 0);
 
@@ -259,7 +260,6 @@ static void printMenu() {
 	std::cout << "  6. Register monitor\n";
 	std::cout << "  7. Drop Next\n";
 	std::cout << "  0. Exit\n";
-	std::cout << "Choice: ";
 }
 
 template <typename T>
